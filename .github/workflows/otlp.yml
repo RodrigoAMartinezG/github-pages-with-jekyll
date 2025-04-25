@@ -1,0 +1,49 @@
+
+#
+# Proof of Concept - 19/11/2024
+# Exporting GitHub CI/CD via OpenTelemetry traces into Dynatrace as collector
+# 
+# The main idea is to have a separate GitHub Workflow file, from the one Development Team is using.
+# Here in our otlp.yml we configured the trigger of the pipeline after any other workflow is completed.
+#
+# Once triggered, we used here an existing GitHub Action from the GitHub Marketplace to perform the job of exporting the original workflow via OpenTelemetry traces.
+# Refers to official docs: https://github.com/StephenGoodall/OTLP-GitHubAction-Exporter
+#
+# For the final solution, we will need to create our own GitHub Action since we cannot rely on OpenSource software on system-wide processess
+# that eventually might support Business Critical applications.
+#
+# Here is information about how to create our own GitHub Action:
+# https://docs.github.com/en/actions/sharing-automations/creating-actions/creating-a-javascript-action
+#
+# Developer in charge of creating the GitHub Action, must know about Node.js and OpenTelemetry standard.
+# OpenTelemtry backend has not been decided yet. Solution must be agnostic to the collector.
+# 
+
+
+name: OpenTelemetry - Exporter
+on:
+  workflow_run:
+    workflows: ['*']
+    types: ['*']
+
+permissions: read-all
+
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: https://pocotelcollector.victorioushill-a78a0db8.westeurope.azurecontainerapps.io
+  OTLP_PROTOCOL: HTTP
+  #OTEL_EXPORTER_OTLP_HEADERS: Authorization=Api-Token ${{ secrets.DYNATRACE_OTEL_API_TOKEN }}
+  ACTION_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+  WORKFLOW_RUN_NAME: ${{ github.event.workflow_run.name }}
+  GITHUB_DEBUG: false
+
+jobs:
+
+  otlp:
+    name: Dynatrace GitHubAction Exporter
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Run Dynatrace GitHubAction Exporter
+        uses: StephenGoodall/OTLP-GitHubAction-Exporter@v3.2.5
+        
